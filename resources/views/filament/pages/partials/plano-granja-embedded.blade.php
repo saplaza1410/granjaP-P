@@ -1,0 +1,506 @@
+@push('styles')
+    <style>
+        .farm-map-plano {
+            --farm-plano-bg: #0f1419;
+            --farm-plano-panel: #1a2332;
+            --farm-plano-text: #e8eef5;
+            --farm-plano-muted: #8b9bb4;
+            --farm-plano-accent: #3d9e6b;
+            box-sizing: border-box;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: var(--farm-plano-bg);
+            color: var(--farm-plano-text);
+            line-height: 1.45;
+        }
+        .farm-map-plano *,
+        .farm-map-plano *::before,
+        .farm-map-plano *::after {
+            box-sizing: border-box;
+        }
+        .farm-map-plano-header {
+            padding: 1rem 1.25rem;
+            background: var(--farm-plano-panel);
+            border-bottom: 1px solid #2a3545;
+        }
+        .farm-map-plano-header h1 {
+            margin: 0 0 0.35rem;
+            font-size: 1.15rem;
+            font-weight: 650;
+        }
+        .farm-map-plano-header p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--farm-plano-muted);
+            max-width: 52rem;
+        }
+        .farm-map-plano-layout {
+            display: grid;
+            grid-template-columns: 1fr minmax(260px, 320px);
+            gap: 0;
+            min-height: min(70vh, 720px);
+        }
+        @media (max-width: 900px) {
+            .farm-map-plano-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        .farm-map-plano-map-wrap {
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+        }
+        #farmPlanoSvg {
+            max-width: 100%;
+            height: auto;
+            filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+        }
+        .farm-map-plano .zone-poly {
+            stroke: rgba(255, 255, 255, 0.12);
+            stroke-width: 0.35;
+            cursor: pointer;
+            transition:
+                filter 0.15s ease,
+                opacity 0.15s;
+        }
+        .farm-map-plano .zone-poly:hover,
+        .farm-map-plano .zone-poly:focus {
+            filter: brightness(1.12);
+        }
+        .farm-map-plano .zone-poly.dim {
+            opacity: 0.35;
+        }
+        .farm-map-plano .lbl {
+            font-size: 3.8px;
+            fill: rgba(255, 255, 255, 0.92);
+            font-weight: 600;
+            pointer-events: none;
+            text-anchor: middle;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+        }
+        .farm-map-plano .lbl-sm {
+            font-size: 3px;
+            fill: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+        .farm-map-plano .road {
+            fill: #3d4555;
+            stroke: #5a6578;
+            stroke-width: 0.4;
+        }
+        .farm-map-plano-aside {
+            background: var(--farm-plano-panel);
+            border-left: 1px solid #2a3545;
+            padding: 1rem 1rem 1.5rem;
+        }
+        @media (max-width: 900px) {
+            .farm-map-plano-aside {
+                border-left: none;
+                border-top: 1px solid #2a3545;
+            }
+        }
+        .farm-map-plano-aside h2 {
+            margin: 0 0 0.75rem;
+            font-size: 0.95rem;
+        }
+        .farm-map-plano .legend {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            font-size: 0.8rem;
+        }
+        .farm-map-plano .legend li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.45rem;
+        }
+        .farm-map-plano .swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .farm-map-plano .detail {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.82rem;
+        }
+        .farm-map-plano .detail strong {
+            color: #a8d4b8;
+        }
+        .farm-map-plano .detail p {
+            margin: 0.4rem 0 0;
+            color: var(--farm-plano-muted);
+        }
+        .farm-map-plano .measure {
+            font-size: 0.75rem;
+            color: var(--farm-plano-muted);
+            margin-top: 0.75rem;
+        }
+        .farm-map-plano button.reset {
+            margin-top: 0.75rem;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            border: 1px solid #3d7a5a;
+            background: #1e3d2e;
+            color: #c5ecd8;
+            cursor: pointer;
+        }
+        .farm-map-plano button.reset:hover {
+            background: #265c42;
+        }
+    </style>
+@endpush
+
+<div
+    class="farm-map-plano overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-white/10"
+    wire:ignore
+>
+    <header class="farm-map-plano-header">
+        <h1>Plano de propiedad — granja productiva (~1 ha)</h1>
+        <p>
+            Trapecio: <strong>50 m</strong> de frente (acceso), <strong>65 m</strong> de fondo,
+            <strong>175 m</strong> de largo. Polígono con lados laterales ligeramente curvos (aprox.).
+            Hacé clic en cada zona para ver detalle. Esto es orientativo: validá con topografía y normativa local.
+        </p>
+    </header>
+
+    <div class="farm-map-plano-layout">
+        <div class="farm-map-plano-map-wrap">
+            <svg
+                id="farmPlanoSvg"
+                viewBox="-8 -12 86 200"
+                role="img"
+                aria-label="Plano de la granja"
+            >
+                <defs>
+                    <linearGradient id="farmPlanoGradHouse" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#c4a882" />
+                        <stop offset="100%" stop-color="#8b7355" />
+                    </linearGradient>
+                </defs>
+
+                <rect class="road" x="0" y="178" width="70" height="10" rx="1" />
+                <text class="lbl-sm" x="35" y="184" text-anchor="middle" fill="#aab4c5">
+                    Frente — acceso / vía
+                </text>
+
+                <path id="farmPlanoPlotOutline" fill="none" stroke="#7a8aa0" stroke-width="0.6" />
+
+                <g id="farmPlanoZones"></g>
+                <g id="farmPlanoLabels"></g>
+
+                <g transform="translate(58,6)">
+                    <polygon points="0,0 -2,6 2,6" fill="#9aa8bc" />
+                    <text x="0" y="10" class="lbl-sm" text-anchor="middle" fill="#9aa8bc">N</text>
+                </g>
+            </svg>
+        </div>
+
+        <aside class="farm-map-plano-aside">
+            <h2>Leyenda y uso del suelo</h2>
+            <ul class="legend" id="farmPlanoLegend"></ul>
+            <p class="measure" id="farmPlanoScaleNote"></p>
+            <div class="detail" id="farmPlanoZoneDetail">
+                <strong>Zona seleccionada</strong>
+                <p>Hacé clic en el plano para ver descripción, superficie aproximada y recomendaciones.</p>
+            </div>
+            <button type="button" class="reset" id="farmPlanoBtnReset">Quitar selección</button>
+        </aside>
+    </div>
+</div>
+
+@push('scripts')
+    @verbatim
+        <script>
+            (function () {
+                'use strict';
+
+                const L = 175;
+                const halfFront = 25;
+                const halfBack = 32.5;
+                const cx = 35;
+
+                function boundaryXLeft(y) {
+                    const t = y / L;
+                    const linear = cx - halfBack + (halfBack - halfFront) * t;
+                    const curve = 1.8 * Math.sin(Math.PI * t) * Math.sin(Math.PI * t);
+                    return linear - curve;
+                }
+                function boundaryXRight(y) {
+                    const t = y / L;
+                    const linear = cx + halfBack - (halfBack - halfFront) * t;
+                    const curve = 1.8 * Math.sin(Math.PI * t) * Math.sin(Math.PI * t);
+                    return linear + curve;
+                }
+
+                function bandPolygon(yTop, yBottom) {
+                    const lt = boundaryXLeft(yTop);
+                    const rt = boundaryXRight(yTop);
+                    const lb = boundaryXLeft(yBottom);
+                    const rb = boundaryXRight(yBottom);
+                    return [
+                        [lt, yTop],
+                        [rt, yTop],
+                        [rb, yBottom],
+                        [lb, yBottom],
+                    ];
+                }
+
+                function polyPoints(pts) {
+                    return pts.map((p) => p.join(',')).join(' ');
+                }
+
+                function bandAreaM2(yTop, yBottom) {
+                    const avgWidth = (widthAtY(yTop) + widthAtY(yBottom)) / 2;
+                    return avgWidth * (yBottom - yTop);
+                }
+
+                function widthAtY(y) {
+                    return boundaryXRight(y) - boundaryXLeft(y);
+                }
+
+                function buildOutlinePath() {
+                    const steps = 48;
+                    let d = '';
+                    for (let i = 0; i <= steps; i++) {
+                        const y = (i / steps) * L;
+                        const x = boundaryXLeft(y);
+                        d += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+                    }
+                    for (let i = steps; i >= 0; i--) {
+                        const y = (i / steps) * L;
+                        const x = boundaryXRight(y);
+                        d += 'L' + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+                    }
+                    d += 'Z';
+                    return d;
+                }
+
+                const zoneDefs = [
+                    {
+                        id: 'casa',
+                        name: 'Casita + corralillo y patio',
+                        yTop: L - 22,
+                        yBottom: L,
+                        color: '#8b6914',
+                        hint: 'Vivienda, tanque de agua, tendedero, depósito de herramientas. Mantener retiro sanitary frente a pozas y aves.',
+                        split: null,
+                    },
+                    {
+                        id: 'huerto',
+                        name: 'Huertos intensivos',
+                        yTop: L - 48,
+                        yBottom: L - 22,
+                        color: '#2d8f47',
+                        hint: 'Hortalizas de ciclo corto, riego localizado, compost cercano. Rotación de cultivos y coberturas.',
+                    },
+                    {
+                        id: 'aves',
+                        name: 'Gallinas (huevos) y pollos (ceba)',
+                        yTop: L - 78,
+                        yBottom: L - 48,
+                        color: '#c49a3c',
+                        hint: 'Dos módulos separados: gallinas en corral móvil o parideros fijos; pollos en parche con descanso de suelo. Bioseguridad: visita de afuera hacia adentro.',
+                    },
+                    {
+                        id: 'pozas',
+                        name: 'Pozas piscícolas',
+                        yTop: L - 108,
+                        yBottom: L - 78,
+                        color: '#2a7bb5',
+                        hint: 'Varias pozas en serie o paralelo con desnivel mínimo; recirculación/aireación según especie. Respetar distancia a vivienda y pozo de agua potable.',
+                    },
+                    {
+                        id: 'platano',
+                        name: 'Plátano y frutales',
+                        yTop: L - 138,
+                        yBottom: L - 108,
+                        color: '#4a8f3a',
+                        hint: 'Sistema mixto: plátano como sombra parcial para frutales o café futuro. Surcos siguiendo curva de nivel.',
+                    },
+                    {
+                        id: 'raices',
+                        name: 'Yuca, ñame, name mapuey',
+                        yTop: L - 158,
+                        yBottom: L - 138,
+                        color: '#6b8e3d',
+                        hint: 'Cultivos de almidón y raíces; buena rotación con leguminosas o barbecho verde.',
+                    },
+                    {
+                        id: 'mixto',
+                        name: 'Cultivo mixto / pastoreo liviano / compost extendido',
+                        yTop: 0,
+                        yBottom: L - 158,
+                        color: '#5a7c4e',
+                        hint: 'Reserva productiva: maíz intercalado, pasto para corte, montículos de compost, plantas útiles al borde. Amortiguación si el fondo linda con bosque o quebrada.',
+                    },
+                ];
+
+                const svgZones = document.getElementById('farmPlanoZones');
+                const svgLabels = document.getElementById('farmPlanoLabels');
+                const legendEl = document.getElementById('farmPlanoLegend');
+                const detailEl = document.getElementById('farmPlanoZoneDetail');
+                const plotOutline = document.getElementById('farmPlanoPlotOutline');
+                const scaleNote = document.getElementById('farmPlanoScaleNote');
+                const btnReset = document.getElementById('farmPlanoBtnReset');
+
+                if (
+                    !svgZones ||
+                    !svgLabels ||
+                    !legendEl ||
+                    !detailEl ||
+                    !plotOutline ||
+                    !scaleNote ||
+                    !btnReset
+                ) {
+                    return;
+                }
+
+                plotOutline.setAttribute('d', buildOutlinePath());
+
+                let selectedId = null;
+
+                function setSelected(id) {
+                    selectedId = id;
+                    document.querySelectorAll('.farm-map-plano .zone-poly').forEach((el) => {
+                        const zid = el.getAttribute('data-zone');
+                        el.classList.toggle('dim', id !== null && zid !== id);
+                    });
+                }
+
+                function showDetail(z) {
+                    const m2 = bandAreaM2(z.yTop, z.yBottom);
+                    detailEl.innerHTML =
+                        '<strong>' +
+                        z.name +
+                        '</strong>' +
+                        '<p>Superficie aproximada: <strong>' +
+                        Math.round(m2) +
+                        ' m²</strong> (~' +
+                        ((m2 / 10000) * 100).toFixed(1) +
+                        '% de la hectárea).</p>' +
+                        '<p>' +
+                        z.hint +
+                        '</p>';
+                }
+
+                zoneDefs.forEach((z, idx) => {
+                    const pts = bandPolygon(z.yTop, z.yBottom);
+                    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    poly.setAttribute('points', polyPoints(pts));
+                    poly.setAttribute('fill', z.color);
+                    poly.setAttribute('class', 'zone-poly');
+                    poly.setAttribute('data-zone', z.id);
+                    poly.setAttribute('tabindex', '0');
+                    poly.addEventListener('click', () => {
+                        setSelected(z.id);
+                        showDetail(z);
+                    });
+                    poly.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelected(z.id);
+                            showDetail(z);
+                        }
+                    });
+                    svgZones.appendChild(poly);
+
+                    const cxLabel = cx;
+                    const cyLabel = (z.yTop + z.yBottom) / 2;
+                    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    t.setAttribute('x', cxLabel);
+                    t.setAttribute('y', cyLabel);
+                    t.setAttribute('class', 'lbl');
+                    t.textContent = String(idx + 1) + '. ' + z.name.split(' ').slice(0, 2).join(' ');
+                    svgLabels.appendChild(t);
+
+                    const li = document.createElement('li');
+                    li.innerHTML =
+                        '<span class="swatch" style="background:' +
+                        z.color +
+                        '"></span>' +
+                        '<span><strong>' +
+                        (idx + 1) +
+                        '.</strong> ' +
+                        z.name +
+                        '</span>';
+                    legendEl.appendChild(li);
+                });
+
+                (function drawHouse() {
+                    const y0 = L - 20;
+                    const y1 = L - 2;
+                    const xl0 = boundaryXLeft(L) + 2;
+                    const xr0 = xl0 + 11;
+                    const house = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    body.setAttribute('x', xl0);
+                    body.setAttribute('y', y0 + 2);
+                    body.setAttribute('width', xr0 - xl0);
+                    body.setAttribute('height', y1 - y0 - 3);
+                    body.setAttribute('fill', 'url(#farmPlanoGradHouse)');
+                    body.setAttribute('stroke', '#5c4a32');
+                    body.setAttribute('stroke-width', '0.35');
+                    const roof = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    const midx = (xl0 + xr0) / 2;
+                    roof.setAttribute(
+                        'points',
+                        polyPoints([
+                            [xl0 - 0.8, y0 + 2],
+                            [midx, y0 - 2.8],
+                            [xr0 + 0.8, y0 + 2],
+                        ]),
+                    );
+                    roof.setAttribute('fill', '#6e4540');
+                    roof.setAttribute('stroke', '#452a26');
+                    roof.setAttribute('stroke-width', '0.28');
+                    house.appendChild(roof);
+                    house.appendChild(body);
+                    svgLabels.appendChild(house);
+                    const ht = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    ht.setAttribute('x', midx);
+                    ht.setAttribute('y', y1 + 2);
+                    ht.setAttribute('class', 'lbl-sm');
+                    ht.textContent = 'Casita';
+                    svgLabels.appendChild(ht);
+                })();
+
+                (function drawDims() {
+                    const yt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    yt.setAttribute('class', 'lbl-sm');
+                    yt.setAttribute('x', boundaryXRight(40) + 5);
+                    yt.setAttribute('y', L / 2);
+                    yt.setAttribute('fill', '#7a8699');
+                    yt.textContent = '175 m';
+                    svgLabels.appendChild(yt);
+                })();
+
+                const approxTotal = zoneDefs.reduce((acc, z) => acc + bandAreaM2(z.yTop, z.yBottom), 0);
+                scaleNote.textContent =
+                    'Escala del dibujo proporcional en metros internos SVG. Área modelo sumando franjas ≈ ' +
+                    Math.round(approxTotal) +
+                    ' m² (dif. redondeo y curvas ±). Real ≈ 10 000 m².';
+
+                btnReset.addEventListener('click', () => {
+                    setSelected(null);
+                    detailEl.innerHTML =
+                        '<strong>Zona seleccionada</strong><p>Hacé clic en el plano para ver detalle.</p>';
+                });
+
+                svgZones.addEventListener('click', (e) => {
+                    if (e.target === svgZones) {
+                        setSelected(null);
+                    }
+                });
+            })();
+        </script>
+    @endverbatim
+@endpush
