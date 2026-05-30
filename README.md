@@ -13,7 +13,20 @@ GranjaP-P es una aplicación web para la gestión integral de una finca avícola
 
 ## Capturas de pantalla
 
-> *Próximamente — añade capturas del panel y la tienda aquí*
+**Portada**
+
+![Portada — Del campo a tu mesa](.github/screenshots/portada.png)
+
+<table>
+  <tr>
+    <td><strong>Tienda pública</strong></td>
+    <td><strong>Panel de administración</strong></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/tienda.png" alt="Tienda pública"></td>
+    <td><img src=".github/screenshots/admin.png" alt="Panel de administración"></td>
+  </tr>
+</table>
 
 ---
 
